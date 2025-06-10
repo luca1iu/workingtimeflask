@@ -21,16 +21,11 @@
   <div class="flex items-center gap-2">
     <span class="text-3xl font-bold text-green-500 pixel-font tracking-widest">WorkingTime</span>
     <span class="ml-2 text-green-700 text-lg font-light pixel-font">
-      {% if country_name %} · {{ country_name }}{% endif %}
+      <!-- 可选：显示国家名/flag -->
     </span>
   </div>
   <div class="flex gap-2">
-    <a href="/" class="px-3 py-1 rounded border border-green-700 bg-black text-green-400 hover:bg-green-900 transition pixel-font {% if not country_code %}bg-green-800 text-black font-bold{% endif %}">Home</a>
-    <a href="/US" class="px-3 py-1 rounded border border-green-700 bg-black text-green-400 hover:bg-green-900 transition pixel-font {% if country_code == 'US' %}bg-green-800 text-black font-bold{% endif %}">United States🇺🇸</a>
-    <a href="/AU" class="px-3 py-1 rounded border border-green-700 bg-black text-green-400 hover:bg-green-900 transition pixel-font {% if country_code == 'AU' %}bg-green-800 text-black font-bold{% endif %}">Australia🇦🇺</a>
-    <a href="/DE" class="px-3 py-1 rounded border border-green-700 bg-black text-green-400 hover:bg-green-900 transition pixel-font {% if country_code == 'DE' %}bg-green-800 text-black font-bold{% endif %}">Germany🇩🇪</a>
-    <a href="/GB" class="px-3 py-1 rounded border border-green-700 bg-black text-green-400 hover:bg-green-900 transition pixel-font {% if country_code == 'GB' %}bg-green-800 text-black font-bold{% endif %}">United Kingdom🇬🇧</a>
-    <a href="/CA" class="px-3 py-1 rounded border border-green-700 bg-black text-green-400 hover:bg-green-900 transition pixel-font {% if country_code == 'CA' %}bg-green-800 text-black font-bold{% endif %}">Canada🇨🇦</a>
+    <a href="/" class="px-3 py-1 rounded border border-green-700 bg-black text-green-400 hover:bg-green-900 transition pixel-font bg-green-800 text-black font-bold">Home</a>
   </div>
 </nav>
 <main class="w-full flex flex-col flex-1 px-0 py-0 min-h-0">

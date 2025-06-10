@@ -3,50 +3,176 @@
 {% block title %}Working Time Dashboard{% endblock %}
 
 {% block content %}
-
-<h2>Choose Your Country and Region</h2>
-<form method='POST'>
-
-    <label for='country'>Select Counrty:</label>
-    <select id='country' name='country' onchange='updateStatesAndCurrency();' required>
-        <option value="" disabled selected>Please select a country</option>
-        <option value="US">🇺🇸United States </option>
-        <option value="AU">🇦🇺Australia</option>
-        <option value="DE">🇩🇪Germany</option>
-        <option value="GB">🇬🇧United Kingdom</option>
-        <option value="CA">🇨🇦Canada</option>
+<form method='POST' id="income-form"
+      class="w-full bg-black text-green-400 font-mono p-6 border-b-2 border-green-700 flex flex-col md:flex-row flex-wrap gap-4 items-center justify-center">
+    <label for="country" class="min-w-max">Country:</label>
+    <select id="country" name="country" required class="bg-black text-green-400 border border-green-700 rounded px-2 py-1 font-mono">
+        <option value="US" {% if country_code == 'US' %}selected{% endif %}>🇺🇸 United States</option>
+        <option value="AU" {% if country_code == 'AU' %}selected{% endif %}>🇦🇺 Australia</option>
+        <option value="DE" {% if country_code == 'DE' %}selected{% endif %}>🇩🇪 Germany</option>
+        <option value="GB" {% if country_code == 'GB' %}selected{% endif %}>🇬🇧 United Kingdom</option>
+        <option value="CA" {% if country_code == 'CA' %}selected{% endif %}>🇨🇦 Canada</option>
     </select>
-    <br><br>
-
-    <label for="state">Select State/Region:</label>
-    <select id="state" name="state" onchange='updateIncomeFields();' required>
-        <option value="" disabled selected>Please select a country first</option>
+    <label for="state" class="min-w-max">State/Region:</label>
+    <select id="state" name="state" required class="bg-black text-green-400 border border-green-700 rounded px-2 py-1 font-mono">
+        <option value="" disabled {% if not state %}selected{% endif %}>Please select a state/region</option>
+        {% if country_code and state %}
+        <option value="{{ state }}" selected>{{ state }}</option>
+        {% endif %}
     </select>
-    <br><br>
+    <label for="gross_income" class="min-w-max">Gross{{ currency_symbol or '' }}:</label>
+    <input type="number" id="gross_income" name="gross_income" step="0.01"
+           placeholder="Gross Income" value="{{ gross or '' }}"
+           class="bg-black text-green-400 border border-green-700 rounded px-2 py-1 w-28 font-mono" required>
+    <label for="net_income" class="min-w-max">Net{{ currency_symbol or '' }}:</label>
+    <input type="number" id="net_income" name="net_income" step="0.01"
+           placeholder="Net Income" value="{{ net or '' }}"
+           class="bg-black text-green-400 border border-green-700 rounded px-2 py-1 w-28 font-mono" required>
+    <label for="start_time" class="min-w-max">Start:</label>
+    <input type="time" id="start_time" name="start_time" value="{{ start_time or '09:00' }}"
+           class="bg-black text-green-400 border border-green-700 rounded px-2 py-1 w-24 font-mono" required>
+    <label for="end_time" class="min-w-max">End:</label>
+    <input type="time" id="end_time" name="end_time" value="{{ end_time or '17:00' }}"
+           class="bg-black text-green-400 border border-green-700 rounded px-2 py-1 w-24 font-mono" required>
+    <input type="submit" value="Calculate"
+           class="bg-green-700 text-black font-bold px-4 py-2 rounded ml-2 hover:bg-green-500 transition cursor-pointer border border-green-400">
 </form>
 
-
-
-<form id="income-form">
-    <div>
-        <label for="gross_income">Gross Monthly Income </label>
-        <span id="currency-symbol-gross"></span>
-        <input type="number" id="gross_income" name="gross_income" step="0.01" placeholder="Enter Gross Income" required>
+<div class="w-full flex-1 flex flex-col items-center justify-start px-0 py-8 min-h-0">
+  <div class="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-8">
+    <!-- Echarts Gauge Chart for Workdays Completed This Month -->
+    <div class="border-2 border-green-700 bg-black p-8 rounded-lg flex flex-col items-center pixel-font">
+      <div class="text-xl font-bold mb-2 text-green-300">Workdays Completed This Month</div>
+      <div id="workdays-gauge" style="width: 380px; height: 300px;"></div>
+        <div class="mt-4 text-green-400 text-base" id="next-weekend">Days until next weekend: <span id="days-to-weekend"></span></div>
     </div>
+    <!-- 动态时间和收入 -->
+    <div class="border-2 border-green-700 bg-black p-8 rounded-lg flex flex-col gap-6 pixel-font">
+      <div>
+        <div class="text-xl font-bold text-green-300">Today's Working Time</div>
+        <div class="text-base text-green-500 mt-1" id="dynamic-worked-time"></div>
+      </div>
+      <div>
+        <div class="text-xl font-bold text-green-300">Today's Earnings</div>
+        <div class="flex gap-8 mt-2">
+          <div class="text-green-400 font-bold text-2xl" id="dynamic-gross">0 {{ currency_symbol }}</div>
+          <div class="text-green-600 font-bold text-2xl" id="dynamic-net">0 {{ currency_symbol }}</div>
+        </div>
+        <div class="text-xs text-green-700">(Gross / Net)</div>
+      </div>
+      <div class="mt-2">
+        <div class="text-xl font-bold text-green-300">Monthly Total</div>
+        <div class="flex gap-8 mt-2">
+          <div class="text-green-400 font-bold text-xl">{{ gross_income_so_far|default(0)|round(2) if gross_income_so_far is defined and gross_income_so_far is not none else 0 }} {{ currency_symbol }}</div>
+          <div class="text-green-600 font-bold text-xl">{{ net_income_so_far|default(0)|round(2) if net_income_so_far is defined and net_income_so_far is not none else 0 }} {{ currency_symbol }}</div>
+        </div>
+        <div class="text-xs text-green-700">(Gross / Net)</div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script>
+// 1. 计算距离下个周末还有几天
+(function() {
+  const today = new Date();
+  const day = today.getDay(); // 0=Sunday, 6=Saturday
+  let daysToWeekend = 6 - day;
+  if (day === 6) daysToWeekend = 0; // today is Saturday
+  if (day === 0) daysToWeekend = 6; // today is Sunday
+  document.getElementById('days-to-weekend').textContent = daysToWeekend;
+})();
+// 2. Echarts Gauge Chart for Workdays Completed
+(function() {
+  const already = {{ already_working_days|length if already_working_days is defined else 0 }};
+  const total = {{ working_days_current_month|length if working_days_current_month is defined else 1 }};
+  const percent = total > 0 ? (already / total * 100) : 0;
+  const chart = echarts.init(document.getElementById('workdays-gauge'));
+  chart.setOption({
+    series: [
+      {
+        type: 'gauge',
+        progress: {
+          show: true,
+          width: 18
+        },
 
-    <div>
-        <label for="net_income">Net Monthly Income</label>
-        <span id="currency-symbol-net"></span>
-        <input type="number" id="net_income" name="net_income" step="0.01" placeholder="Enter Net Income" required>
-    </div><br>
+        axisTick: {
+          show: false
+        },
 
-    <label for="start_time">Start Time (HH:MM):</label>
-    <input type="time" name="start_time" value="09:00" required><br>
+        splitLine: {
+          show: false
+        },
 
-    <label for="end_time">End Time (HH:MM):</label>
-    <input type="time" name="end_time" value="17:00" required><br>
-
-    <input type="submit" value="Calculate">
-</form>
-
+        axisLabel: {
+            show: false
+        },
+        anchor: {
+          show: true,
+          showAbove: true,
+          size: 10,
+          itemStyle: {
+            borderWidth: 10
+          }
+        },
+        title: {
+          show: false
+        },
+        detail: {
+          valueAnimation: false,
+          fontSize: 20,
+          color: '#0f0',
+          offsetCenter: [0, '70%'],
+          formatter: function() {
+            return `${already}/${total}`;
+          }
+        },
+        data: [
+          {
+            value: percent
+          }
+        ],
+        pointer: {
+          show: true
+        }
+      }
+    ]
+  });
+})();
+// 3. 动态更新时间和收入
+(function() {
+  // 这些变量由后端传递
+  const startTime = '{{ start_time or "09:00" }}';
+  const endTime = '{{ end_time or "17:00" }}';
+  const grossPerDay = Number({{ gross|default(0) }} / ({{ working_days_current_month|length if working_days_current_month is defined else 1 }}));
+  const netPerDay = Number({{ net|default(0) }} / ({{ working_days_current_month|length if working_days_current_month is defined else 1 }}));
+  const currency = '{{ currency_symbol }}';
+  function parseTime(t) {
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+  }
+  const startMinutes = parseTime(startTime);
+  const endMinutes = parseTime(endTime);
+  const totalMinutes = endMinutes - startMinutes;
+  function update() {
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    let worked = Math.max(0, Math.min(nowMinutes - startMinutes, totalMinutes));
+    let percent = totalMinutes > 0 ? (worked / totalMinutes) : 0;
+    // 动态时间
+    let hours = Math.floor(worked / 60);
+    let mins = worked % 60;
+    let secs = now.getSeconds();
+    document.getElementById('dynamic-worked-time').textContent = `${hours.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')} / ${Math.floor(totalMinutes/60).toString().padStart(2,'0')}:${(totalMinutes%60).toString().padStart(2,'0')}:00 (${(percent*100).toFixed(1)}%)`;
+    // 动态收入
+    let gross = grossPerDay * percent;
+    let net = netPerDay * percent;
+    document.getElementById('dynamic-gross').textContent = `${gross.toFixed(2)} ${currency}`;
+    document.getElementById('dynamic-net').textContent = `${net.toFixed(2)} ${currency}`;
+  }
+  setInterval(update, 1000);
+  update();
+})();
+</script>
 {% endblock %}

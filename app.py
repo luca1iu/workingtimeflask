@@ -26,23 +26,45 @@ def get_holidays():
 
 @app.route("/", methods=["GET", "POST"])
 def home():
-    country = request.form.get("country")
-    region = request.form.get("state")
-    gross = float(request.form.get("gross_income", 0))
-    net = float(request.form.get("net_income", 0))
-    start_time = request.form.get("start_time")
-    end_time = request.form.get("end_time")
-
+    country_info = {
+        "US": {"name": "United States", "flag": "🇺🇸", "currency": {"name": "USD", "symbol": "($)"}},
+        "AU": {"name": "Australia", "flag": "🇦🇺", "currency": {"name": "AUD", "symbol": "(A$)"}},
+        "DE": {"name": "Germany", "flag": "🇩🇪", "currency": {"name": "EUR", "symbol": "(€)"}},
+        "GB": {"name": "United Kingdom", "flag": "🇬🇧", "currency": {"name": "GBP", "symbol": "(£)"}},
+        "CA": {"name": "Canada", "flag": "🇨🇦", "currency": {"name": "CAD", "symbol": "(C$)"}},
+    }
+    default_regions = {
+        "US": "CA - California",
+        "AU": "NSW - New South Wales",
+        "DE": "NW - Nordrhein-Westfalen",
+        "GB": "ENG - England",
+        "CA": "ON - Ontario"
+    }
+    default_income = {
+        "US": {"gross": 5000, "net": 4000},
+        "AU": {"gross": 7000, "net": 5500},
+        "DE": {"gross": 4500, "net": 3000},
+        "GB": {"gross": 4800, "net": 3500},
+        "CA": {"gross": 5200, "net": 4000}
+    }
     if request.method == "POST":
-        print(
-            f"Country: {country}, Region: {region}, Gross Income: {gross}, Net Income: {net}, Start Time: {start_time}, End Time: {end_time}")
-
-    return render_template('index.html', country=country,
-                           region=region,
-                           gross=gross,
-                           net=net,
-                           start_time=start_time,
-                           end_time=end_time)
+        country = request.form.get("country", "US")
+        state = request.form.get("state")
+        gross = request.form.get("gross_income")
+        net = request.form.get("net_income")
+        start_time = request.form.get("start_time")
+        end_time = request.form.get("end_time")
+    else:
+        country = "US"
+        state = default_regions[country]
+        gross = default_income[country]["gross"]
+        net = default_income[country]["net"]
+        start_time = "09:00"
+        end_time = "17:00"
+    context = get_dashboard_context(country, state, gross, net, start_time, end_time)
+    if context is None:
+        return render_template("error.html", message="Invalid country code"), 400
+    return render_template("index.html", **context)
 
 
 def get_dashboard_context(country_code, state=None, gross=None, net=None, start_time=None, end_time=None):
@@ -123,39 +145,6 @@ def get_dashboard_context(country_code, state=None, gross=None, net=None, start_
         gross_income_so_far=gross_income_so_far,
         net_income_so_far=net_income_so_far
     )
-
-
-@app.route("/<country_code>", methods=["GET", "POST"])
-def country_dashboard(country_code):
-    if request.method == "POST":
-        state = request.form.get("state")
-        gross = request.form.get("gross_income")
-        net = request.form.get("net_income")
-        start_time = request.form.get("start_time")
-        end_time = request.form.get("end_time")
-        context = get_dashboard_context(country_code, state, gross, net, start_time, end_time)
-        if context is None:
-            return render_template("error.html", message="Invalid country code"), 400
-        return render_template("country.html", **context)
-    # GET: 用默认值
-    context = get_dashboard_context(country_code)
-    if context is None:
-        return render_template("error.html", message="Invalid country code"), 400
-    return render_template("country.html", **context)
-
-
-@app.route("/<country_code>/calculate", methods=["POST"])
-def calculate(country_code):
-    # 兼容老前端，直接复用
-    state = request.form.get("state")
-    gross = request.form.get("gross_income")
-    net = request.form.get("net_income")
-    start_time = request.form.get("start_time")
-    end_time = request.form.get("end_time")
-    context = get_dashboard_context(country_code, state, gross, net, start_time, end_time)
-    if context is None:
-        return render_template("error.html", message="Invalid country code"), 400
-    return render_template("country.html", **context)
 
 
 if __name__ == "__main__":
