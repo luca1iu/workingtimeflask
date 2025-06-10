@@ -1,5 +1,4 @@
 from dateutil.utils import today
-
 from app_functions import *
 
 app = Flask(__name__)

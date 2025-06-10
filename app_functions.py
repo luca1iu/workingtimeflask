@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 from datetime import date, timedelta
 import holidays
+import pandas as pd
 
 
 def extract_region_code(region_str):

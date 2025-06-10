@@ -1,0 +1,27 @@
+{
+  "name": "workingtimeflask",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/luca1iu/workingtimeflask.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/luca1iu/workingtimeflask/issues"
+  },
+  "homepage": "https://github.com/luca1iu/workingtimeflask#readme",
+  "description": "",
+  "devDependencies": {
+    "tailwindcss": "^4.1.8"
+  },
+  "scripts": {
+    "build": "npx tailwindcss -i ./static/tailwind.css -o ./static/output.css",
+    "watch": "npx tailwindcss -i ./static/tailwind.css -o ./static/output.css --watch"
+  }
+}
