@@ -5,56 +5,64 @@
 {% block content %}
 <h2>{{ country_flag }} {{ country_name }}</h2>
 
-<form method='POST'>
+{% if errors %}
+<div style="color: red;">
+    <ul>
+        {% for error in errors %}
+        <li>{{ error }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
 
-  {# 只在没有默认国家（如从主页进入）时显示国家选择框 #}
-  {% if not country_name %}
-  <label for="country">Select Country:</label>
-  <select id="country" name="country" onchange="updateStatesAndCurrency();" required>
-    <option value="" disabled selected>Please select a country</option>
-    <option value="US">🇺🇸United States</option>
-    <option value="AU">🇦🇺Australia</option>
-    <option value="DE">🇩🇪Germany</option>
-    <option value="GB">🇬🇧United Kingdom</option>
-    <option value="CA">🇨🇦Canada</option>
-  </select>
-  <br><br>
-  {% else %}
-  <input type="hidden" name="country" value="{{ country_name }}">
-  {% endif %}
+<form method='POST' action="{{ url_for('calculate', country_code=country_code) }}" id="income-form">
 
-  <br><br>
+    {# Hidden input for country if country_name is set #}
+    {% if country_name %}
+    <input type="hidden" name="country" value="{{ country_code }}">
+    {% else %}
+    <label for="country">Select Country:</label>
+    <select id="country" name="country" required>
+        <option value="" disabled selected>Please select a country</option>
+        <option value="US">🇺🇸 United States</option>
+        <option value="AU">🇦🇺 Australia</option>
+        <option value="DE">🇩🇪 Germany</option>
+        <option value="GB">🇬🇧 United Kingdom</option>
+        <option value="CA">🇨🇦 Canada</option>
+    </select>
+    <br><br>
+    {% endif %}
 
-  <label for="state">Select State/Region:</label>
-  <select id="state" name="state" required>
-    <option value="" disabled selected>Please select a country first</option>
-  </select>
-  <br><br>
-</form>
+    <label for="state">Select State/Region:</label>
+    <select id="state" name="state" required>
+        <option value="" disabled {% if not state %}selected{% endif %}>Please select a state/region</option>
+    </select>
+    <br><br>
 
-<form id="income-form">
-  <div>
-    <label for="gross_income">Gross Monthly Income </label>
-    <span id="currency-symbol-gross"></span>
-    <input type="number" id="gross_income" name="gross_income" step="0.01" placeholder="Enter Gross Income" required>
-  </div>
+    <div>
+        <label for="gross_income">Gross Monthly Income </label>
+        <span id="currency-symbol-gross">{{ currency_symbol or '' }}</span>
+        <input type="number" id="gross_income" name="gross_income" step="0.01"
+               placeholder="Enter Gross Income" value="{{ gross or '' }}" required>
+    </div>
 
-  <div>
-    <label for="net_income">Net Monthly Income</label>
-    <span id="currency-symbol-net"></span>
-    <input type="number" id="net_income" name="net_income" step="0.01" placeholder="Enter Net Income" required>
-  </div><br>
+    <div>
+        <label for="net_income">Net Monthly Income</label>
+        <span id="currency-symbol-net">{{ currency_symbol or '' }}</span>
+        <input type="number" id="net_income" name="net_income" step="0.01"
+               placeholder="Enter Net Income" value="{{ net or '' }}" required>
+    </div>
+    <br>
 
-  <label for="start_time">Start Time (HH:MM):</label>
-  <input type="time" name="start_time" value="09:00" required><br>
+    <label for="start_time">Start Time (HH:MM):</label>
+    <input type="time" id="start_time" name="start_time" value="{{ start_time or '09:00' }}" required><br>
 
-  <label for="end_time">End Time (HH:MM):</label>
-  <input type="time" name="end_time" value="17:00" required><br>
+    <label for="end_time">End Time (HH:MM):</label>
+    <input type="time" id="end_time" name="end_time" value="{{ end_time or '17:00' }}" required><br>
 
-  <form method="POST">
-    <!-- your fields -->
+
     <input type="submit" value="Calculate">
-  </form>
+
 </form>
 
 <!--{% if holidays_this_month %}-->
@@ -69,8 +77,27 @@
 <!--{% endif %}-->
 
 <div id="holidays-section">
-  <h1>Test</h1>
-  <!-- Holidays will appear here dynamically -->
+    <!-- This section will be populated with holidays dynamically -->
+    {% if holidays %}
+    <h3>Holidays in {{ state or 'Unknown Region' }} for {{ current_month }}</h3>
+
+    <h4> Working Days in {{ current_month }}</h4>
+    {% if working_days_current_month|length > 0 %}
+    <p>Working days in {{ current_month }}: {{ working_days_current_month|length }}</p>
+    {% endif %}
+
+    {% if holidays|length > 0 %}
+    <ul>
+        {% for holiday in holidays %}
+        <li>{{ holiday }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% else %}
+    <p>Loading holidays...</p>
+    {% endif %}
+    <!-- Holidays will appear here dynamically -->
 </div>
 
 {% endblock %}

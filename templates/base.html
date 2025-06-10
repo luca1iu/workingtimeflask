@@ -15,6 +15,7 @@
 </main>
 
 <script>
+
     const defaultRegions = {
         US: "CA - California",
         AU: "NSW - New South Wales",
@@ -40,127 +41,128 @@
     };
 
     const countryCodeFromServer = "{{ country_code | default('') }}";
+    const stateFromServer = "{{ state | default('') }}";
     let states = {};
 
     document.addEventListener("DOMContentLoaded", () => {
+        // Skip initialization if no country code (e.g., homepage)
+        if (!countryCodeFromServer) return;
+
         fetch("{{ url_for('static', filename='states.json') }}")
             .then(response => response.json())
             .then(data => {
                 states = data;
 
-                // ✅ 加载完 states 后才填充下拉
-                if (countryCodeFromServer && states[countryCodeFromServer]) {
-                    populateStates(countryCodeFromServer);
-                    setIncomeAndCurrency(countryCodeFromServer);
+                // Populate states and select the server-provided state
+                if (states[countryCodeFromServer]) {
+                    populateStates(countryCodeFromServer, stateFromServer);
                 }
 
-                // 如果有手动选择国家的 select（首页），监听变化
-                const countrySelect = document.getElementById("country");
-                if (countrySelect) {
-                    countrySelect.addEventListener("change", () => {
-                        const selectedCountry = countrySelect.value;
-                        populateStates(selectedCountry);
-                        setIncomeAndCurrency(selectedCountry);
-                    });
-                }
+                // Set currency and income defaults only if no server values
+                setIncomeAndCurrency(countryCodeFromServer);
 
+                // Fetch holidays if no server-provided holidays
+                {% if not holidays %}
+                const state = stateFromServer || defaultRegions[countryCodeFromServer] || states[countryCodeFromServer][0];
+                fetchHolidays(countryCodeFromServer, state);
+                {% endif %}
+
+                // Handle state selection change
                 const stateSelect = document.getElementById("state");
                 if (stateSelect) {
                     stateSelect.addEventListener("change", () => {
-                        const selectedCountry = countryCodeFromServer || countrySelect?.value;
-                        if (selectedCountry) {
-                            setIncomeAndCurrency(selectedCountry);
-                        }
+                        fetchHolidays(countryCodeFromServer, stateSelect.value);
                     });
                 }
+            })
+            .catch(error => {
+                console.error("Error loading states:", error);
+                document.getElementById("state").innerHTML = '<option value="" disabled selected>Error loading states</option>';
             });
+
+        // Handle country selection (for homepage)
+        const countrySelect = document.getElementById("country");
+        if (countrySelect) {
+            countrySelect.addEventListener("change", () => {
+                const selectedCountry = countrySelect.value;
+                populateStates(selectedCountry);
+                setIncomeAndCurrency(selectedCountry);
+                fetchHolidays(selectedCountry, defaultRegions[selectedCountry] || states[selectedCountry][0]);
+            });
+        }
     });
 
-    function populateStates(country) {
+    function populateStates(country, selectedState = null) {
         const stateSelect = document.getElementById("state");
         if (!stateSelect || !states[country]) return;
 
-        stateSelect.innerHTML = ""; // 清空旧的
+        stateSelect.innerHTML = '<option value="" disabled>Please select a state/region</option>';
         states[country].forEach(state => {
             const option = document.createElement("option");
             option.value = state;
             option.textContent = state;
             stateSelect.appendChild(option);
         });
-        // Set default region if available
-        let defaultState = states[country][0];
-        if (defaultRegions[country]) {
+
+        // Set selected state or default
+        if (selectedState && states[country].includes(selectedState)) {
+            stateSelect.value = selectedState;
+        } else if (defaultRegions[country]) {
             stateSelect.value = defaultRegions[country];
-            defaultState = defaultRegions[country];
         } else {
             stateSelect.selectedIndex = 0;
         }
-
-        // Fetch and display holidays for the default state
-        fetch('/get_holidays', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({country: country, state: defaultState})
-        })
-            .then(response => response.json())
-            .then(data => {
-                let holidaysSection = document.getElementById('holidays-section');
-                if (data.holidays.length > 0) {
-                    holidaysSection.innerHTML = `<h3>Holidays in ${data.region} for ${data.current_month}</h3>
-                <ul>${data.holidays.map(h => `<li>${h}</li>`).join('')}</ul>`;
-                } else {
-                    holidaysSection.innerHTML = `<p>No holidays this month in ${data.region}.</p>`;
-                }
-            });
     }
 
     function setIncomeAndCurrency(country) {
         const currency = currencyMapping[country];
         const defaultIncome = incomeMapping[country];
-
         if (!currency || !defaultIncome) return;
 
         const grossInput = document.getElementById("gross_income");
         const netInput = document.getElementById("net_income");
+        const grossSymbol = document.getElementById("currency-symbol-gross");
+        const netSymbol = document.getElementById("currency-symbol-net");
 
-        if (grossInput) {
+        // Set defaults only if no server-provided values
+        if (grossInput && !grossInput.value) {
             grossInput.value = defaultIncome.gross;
             grossInput.placeholder = `Gross Income in ${currency.name}`;
         }
-        if (netInput) {
+        if (netInput && !netInput.value) {
             netInput.value = defaultIncome.net;
             netInput.placeholder = `Net Income in ${currency.name}`;
         }
-
-        const grossSymbol = document.getElementById("currency-symbol-gross");
-        const netSymbol = document.getElementById("currency-symbol-net");
-        if (grossSymbol) grossSymbol.textContent = currency.symbol;
-        if (netSymbol) netSymbol.textContent = currency.symbol;
+        // Update currency symbol only if not set by server
+        if (grossSymbol && !grossSymbol.textContent) {
+            grossSymbol.textContent = currency.symbol;
+        }
+        if (netSymbol && !netSymbol.textContent) {
+            netSymbol.textContent = currency.symbol;
+        }
     }
 
-    document.getElementById('state').addEventListener('change', function() {
-        // 从当前 URL 获取国家代码（例如 /us）
-        const pathParts = window.location.pathname.split('/');
-        const country = pathParts[1].toUpperCase(); // 'us' -> 'US'
-
-        const state = this.value;
+    function fetchHolidays(country, state) {
         fetch('/get_holidays', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({country: country, state: state})
+            body: JSON.stringify({ country: country, state: state })
         })
             .then(response => response.json())
             .then(data => {
-                // Update the holidays section
-                let holidaysSection = document.getElementById('holidays-section');
+                const holidaysSection = document.getElementById('holidays-section');
                 if (data.holidays.length > 0) {
-                    holidaysSection.innerHTML = `<h3>Holidays in ${data.region} for ${data.current_month}</h3>
-                <ul>${data.holidays.map(h => `<li>${h}</li>`).join('')}</ul>`;
+                    holidaysSection.innerHTML = `<h3>Holidays in ${data.region || state} for ${data.current_month}</h3>
+                        <ul>${data.holidays.map(h => `<li>${h}</li>`).join('')}</ul>`;
                 } else {
-                    holidaysSection.innerHTML = `<p>No holidays this month in ${data.region}.</p>`;
+                    holidaysSection.innerHTML = `<p>No holidays this month in ${data.region || state}.</p>`;
                 }
+            })
+            .catch(error => {
+                console.error('Error fetching holidays:', error);
+                document.getElementById('holidays-section').innerHTML = `<p>Error loading holidays.</p>`;
             });
-    });
+    }
 
 
 </script>
