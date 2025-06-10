@@ -89,7 +89,6 @@ def calculate(country_code):
     if country_code not in country_info:
         return render_template("error.html", message="Invalid country code"), 400
 
-
     # Get and validate form data
     state = request.form.get("state")
     gross = request.form.get("gross_income")
@@ -130,8 +129,45 @@ def calculate(country_code):
     holidays, working_days_current_month = get_holidays_in_month(country_code, extract_region_code(state))
     left_working_days = [day for day in working_days_current_month if day > today and day not in holidays]
     already_working_days = [day for day in working_days_current_month if day <= today and day not in holidays]
-    gross_income_per_day = gross / len(working_days_current_month)
-    net_income_per_day = net / len(working_days_current_month)
+    gross_income_per_day = round(float(gross) / len(working_days_current_month), 2)
+    net_income_per_day = round(float(net) / len(working_days_current_month), 2)
+
+    print(f"Gross income per day: {gross_income_per_day}")
+    print(f"Net income per day: {net_income_per_day}")
+
+    # how much gross and net income have been earned so far
+    gross_income_so_far = round(gross_income_per_day * len(already_working_days), 2)
+    net_income_so_far = round(net_income_per_day * len(already_working_days), 2)
+    print(f"Gross income so far: {gross_income_so_far}")
+    print(f"Net income so far: {net_income_so_far}")
+    # calculate the daily working duration - assuming start_time and end_time are in HH:MM format
+
+    if start_time and end_time:
+        try:
+            start_hour, start_minute = map(int, start_time.split(":"))
+            end_hour, end_minute = map(int, end_time.split(":"))
+            daily_working_duration = (end_hour - start_hour) * 60 + (end_minute - start_minute)
+        except ValueError:
+            daily_working_duration = 0
+    else:
+        daily_working_duration = 0
+
+    now = pd.Timestamp.now()
+    today_start_time = pd.Timestamp(now.year, now.month, now.day, start_hour, start_minute)
+    today_end_time = pd.Timestamp(now.year, now.month, now.day, end_hour, end_minute)
+
+    worked_minutes = (now - today_start_time).total_seconds() / 60
+    worked_percentage = (worked_minutes / daily_working_duration) * 100
+
+    worked_hours = worked_minutes // 60
+
+    hourly_gross_income = round(gross_income_per_day / (daily_working_duration / 60), 2)
+    hourly_net_income = round(net_income_per_day / (daily_working_duration / 60), 2)
+
+    gross_income_today = worked_hours * hourly_gross_income
+    net_income_today = worked_hours * hourly_net_income
+
+    print(f"Daily working duration: {daily_working_duration} minutes")
 
     print(f"Holidays for {country_code} in {state}: {holidays}")
     print(len(working_days_current_month))
@@ -152,7 +188,7 @@ def calculate(country_code):
         start_time=start_time,
         end_time=end_time,
         holidays=holidays,
-        working_days_current_month = working_days_current_month,
+        working_days_current_month=working_days_current_month,
         current_month=today.strftime("%B")
     )
 
