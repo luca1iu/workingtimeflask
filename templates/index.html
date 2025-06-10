@@ -10,18 +10,18 @@
     <form method='POST'>
 
         <label for='country'>Select Counrty:</label>
-        <select id='country' name='country' onchange='updateStatesAndCurrency()' required>
+        <select id='country' name='country' onchange='updateStatesAndCurrency();' required>
             <option value="" disabled selected>Please select a country</option>
-            <option value="US">🇺🇸 United States</option>
-            <option value="AU">🇦🇺 Australia</option>
-            <option value="DE">🇩🇪 Germany</option>
-            <option value="GB">🇬🇧 United Kingdom</option>
-            <option value="CA">🇨🇦 Canada</option>
+            <option value="US">🇺🇸United States </option>
+            <option value="AU">🇦🇺Australia</option>
+            <option value="DE">🇩🇪Germany</option>
+            <option value="GB">🇬🇧United Kingdom</option>
+            <option value="CA">🇨🇦Canada</option>
         </select>
         <br><br>
 
          <label for="state">Select State/Region:</label>
-        <select id="state" name="state" onchange='updateIncomeFields()' required>
+        <select id="state" name="state" onchange='updateIncomeFields();' required>
             <option value="" disabled selected>Please select a country first</option>
         </select>
         <br><br>
@@ -30,7 +30,6 @@
 
 
     <form id="income-form">
-        
         <div>
             <label for="gross_income">Gross Monthly Income </label>
             <span id="currency-symbol-gross"></span>
@@ -44,13 +43,22 @@
         </div><br>
 
         <label for="start_time">Start Time (HH:MM):</label>
-        <input type="time" name="start_time" required><br>
+        <input type="time" name="start_time" value="09:00" required><br>
 
         <label for="end_time">End Time (HH:MM):</label>
-        <input type="time" name="end_time" required><br>
+        <input type="time" name="end_time" value="17:00" required><br>
 
         <input type="submit" value="Calculate">
     </form>
+
+    {% if holidays_this_month %}
+    <h2>Public Holidays This Month:</h2>
+    <ul>
+        {% for day in holidays_this_month %}
+        <li>{{ day }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
 
     {% if result %}
         <h2>Results:</h2>

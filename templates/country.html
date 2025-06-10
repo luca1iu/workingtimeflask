@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}{{ country_name }} Dashboard{% endblock %}
+
+{% block content %}
+<h2>{{ country_flag }} {{ country_name }}</h2>
+
+<form method='POST'>
+
+  {# 只在没有默认国家（如从主页进入）时显示国家选择框 #}
+  {% if not country_name %}
+  <label for="country">Select Country:</label>
+  <select id="country" name="country" onchange="updateStatesAndCurrency();" required>
+    <option value="" disabled selected>Please select a country</option>
+    <option value="US">🇺🇸United States</option>
+    <option value="AU">🇦🇺Australia</option>
+    <option value="DE">🇩🇪Germany</option>
+    <option value="GB">🇬🇧United Kingdom</option>
+    <option value="CA">🇨🇦Canada</option>
+  </select>
+  <br><br>
+  {% else %}
+  <input type="hidden" name="country" value="{{ country_name }}">
+  {% endif %}
+
+  <br><br>
+
+  <label for="state">Select State/Region:</label>
+  <select id="state" name="state" onchange='updateIncomeFields();' required>
+    <option value="" disabled selected>Please select a country first</option>
+  </select>
+  <br><br>
+</form>
+
+<form id="income-form">
+  <div>
+    <label for="gross_income">Gross Monthly Income </label>
+    <span id="currency-symbol-gross"></span>
+    <input type="number" id="gross_income" name="gross_income" step="0.01" placeholder="Enter Gross Income" required>
+  </div>
+
+  <div>
+    <label for="net_income">Net Monthly Income</label>
+    <span id="currency-symbol-net"></span>
+    <input type="number" id="net_income" name="net_income" step="0.01" placeholder="Enter Net Income" required>
+  </div><br>
+
+  <label for="start_time">Start Time (HH:MM):</label>
+  <input type="time" name="start_time" value="09:00" required><br>
+
+  <label for="end_time">End Time (HH:MM):</label>
+  <input type="time" name="end_time" value="17:00" required><br>
+
+  <input type="submit" value="Calculate">
+</form>
+
+{% if holidays_this_month %}
+<h3>Holidays in {{ selected_region }} for {{ current_month }}</h3>
+<ul>
+  {% for holiday in holidays_this_month %}
+  <li>{{ holiday }}</li>
+  {% endfor %}
+</ul>
+{% elif selected_region %}
+<p>No holidays this month in {{ selected_region }}.</p>
+{% endif %}
+{% endblock %}
