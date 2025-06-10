@@ -38,6 +38,3 @@ def get_holidays_in_month(country_code, state=None):
 
 
 
-
-holidays_current_month, working_days_current_month = get_holidays_in_month('DE', 'NW')
-print(len(working_days_current_month))

@@ -26,7 +26,7 @@
   <br><br>
 
   <label for="state">Select State/Region:</label>
-  <select id="state" name="state" onchange='updateIncomeFields();' required>
+  <select id="state" name="state" required>
     <option value="" disabled selected>Please select a country first</option>
   </select>
   <br><br>
@@ -51,17 +51,26 @@
   <label for="end_time">End Time (HH:MM):</label>
   <input type="time" name="end_time" value="17:00" required><br>
 
-  <input type="submit" value="Calculate">
+  <form method="POST">
+    <!-- your fields -->
+    <input type="submit" value="Calculate">
+  </form>
 </form>
 
-{% if holidays_this_month %}
-<h3>Holidays in {{ selected_region }} for {{ current_month }}</h3>
-<ul>
-  {% for holiday in holidays_this_month %}
-  <li>{{ holiday }}</li>
-  {% endfor %}
-</ul>
-{% elif selected_region %}
-<p>No holidays this month in {{ selected_region }}.</p>
-{% endif %}
+<!--{% if holidays_this_month %}-->
+<!--<h3>Holidays in {{ selected_region }} for {{ current_month }}</h3>-->
+<!--<ul>-->
+<!--  {% for holiday in holidays_this_month %}-->
+<!--  <li>{{ holiday }}</li>-->
+<!--  {% endfor %}-->
+<!--</ul>-->
+<!--{% elif selected_region %}-->
+<!--<p>No holidays this month in {{ selected_region }}.</p>-->
+<!--{% endif %}-->
+
+<div id="holidays-section">
+  <h1>Test</h1>
+  <!-- Holidays will appear here dynamically -->
+</div>
+
 {% endblock %}

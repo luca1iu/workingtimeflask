@@ -1,159 +1,52 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Working Time Dashboard</title>
-</head>
-<body>
-    <h1>Working Time Dashboard</h1>
+{% extends "base.html" %}
 
-    <h1>Choose Your Country and Region</h1>
-    <form method='POST'>
+{% block title %}Working Time Dashboard{% endblock %}
 
-        <label for='country'>Select Counrty:</label>
-        <select id='country' name='country' onchange='updateStatesAndCurrency();' required>
-            <option value="" disabled selected>Please select a country</option>
-            <option value="US">🇺🇸United States </option>
-            <option value="AU">🇦🇺Australia</option>
-            <option value="DE">🇩🇪Germany</option>
-            <option value="GB">🇬🇧United Kingdom</option>
-            <option value="CA">🇨🇦Canada</option>
-        </select>
-        <br><br>
+{% block content %}
 
-         <label for="state">Select State/Region:</label>
-        <select id="state" name="state" onchange='updateIncomeFields();' required>
-            <option value="" disabled selected>Please select a country first</option>
-        </select>
-        <br><br>
-    </form>
-    
+<h2>Choose Your Country and Region</h2>
+<form method='POST'>
+
+    <label for='country'>Select Counrty:</label>
+    <select id='country' name='country' onchange='updateStatesAndCurrency();' required>
+        <option value="" disabled selected>Please select a country</option>
+        <option value="US">🇺🇸United States </option>
+        <option value="AU">🇦🇺Australia</option>
+        <option value="DE">🇩🇪Germany</option>
+        <option value="GB">🇬🇧United Kingdom</option>
+        <option value="CA">🇨🇦Canada</option>
+    </select>
+    <br><br>
+
+    <label for="state">Select State/Region:</label>
+    <select id="state" name="state" onchange='updateIncomeFields();' required>
+        <option value="" disabled selected>Please select a country first</option>
+    </select>
+    <br><br>
+</form>
 
 
-    <form id="income-form">
-        <div>
-            <label for="gross_income">Gross Monthly Income </label>
-            <span id="currency-symbol-gross"></span>
-            <input type="number" id="gross_income" name="gross_income" step="0.01" placeholder="Enter Gross Income" required>
-        </div>
-        
-        <div>
-            <label for="net_income">Net Monthly Income</label>
-            <span id="currency-symbol-net"></span>
-            <input type="number" id="net_income" name="net_income" step="0.01" placeholder="Enter Net Income" required>
-        </div><br>
 
-        <label for="start_time">Start Time (HH:MM):</label>
-        <input type="time" name="start_time" value="09:00" required><br>
+<form id="income-form">
+    <div>
+        <label for="gross_income">Gross Monthly Income </label>
+        <span id="currency-symbol-gross"></span>
+        <input type="number" id="gross_income" name="gross_income" step="0.01" placeholder="Enter Gross Income" required>
+    </div>
 
-        <label for="end_time">End Time (HH:MM):</label>
-        <input type="time" name="end_time" value="17:00" required><br>
+    <div>
+        <label for="net_income">Net Monthly Income</label>
+        <span id="currency-symbol-net"></span>
+        <input type="number" id="net_income" name="net_income" step="0.01" placeholder="Enter Net Income" required>
+    </div><br>
 
-        <input type="submit" value="Calculate">
-    </form>
+    <label for="start_time">Start Time (HH:MM):</label>
+    <input type="time" name="start_time" value="09:00" required><br>
 
-    {% if holidays_this_month %}
-    <h2>Public Holidays This Month:</h2>
-    <ul>
-        {% for day in holidays_this_month %}
-        <li>{{ day }}</li>
-        {% endfor %}
-    </ul>
-    {% endif %}
+    <label for="end_time">End Time (HH:MM):</label>
+    <input type="time" name="end_time" value="17:00" required><br>
 
-    {% if result %}
-        <h2>Results:</h2>
-        <p>Total Workdays: {{ result.total_workdays }}</p>
-        <p>Elapsed Workdays: {{ result.elapsed_workdays }}</p>
-        <p>Remaining Workdays: {{ result.remaining_workdays }}</p>
-        <p>Daily Earnings: {{ result.daily_salary }}</p>
-        <p>Earned This Month So Far: {{ result.earned_so_far }}</p>
-        <p>Today's Progress: {{ result.today_progress }}%</p>
-        <p>Hours Worked Today: {{ result.worked_hours_today }}</p>
-        <p>Today's Earnings: {{ result.today_earned }}</p>
-    {% endif %}
+    <input type="submit" value="Calculate">
+</form>
 
-
-    <!-- JavaScript to handle the dynamic states/regions dropdown -->
-    <script>
-        // Currency Mapping for Each Country
-        const currencyMapping = {
-            US: { name: "USD", symbol: "($)" },
-            AU: { name: "AUD", symbol: "(A$)" },
-            DE: { name: "EUR", symbol: "(€)" },
-            GB: { name: "GBP", symbol: "(£)" },
-            CA: { name: "CAD", symbol: "(C$)" }
-        };
-
-        // Default Income Mapping for Each Country
-        const incomeMapping = {
-            US: { gross: 5000, net: 4000 },
-            AU: { gross: 7000, net: 5500 },
-            DE: { gross: 4500, net: 3000 },
-            GB: { gross: 4800, net: 3500 },
-            CA: { gross: 5200, net: 4000 }
-        };
-
-
-        let states = {};
-
-        // Fetch `states.json` dynamically on page load
-        fetch("{{ url_for('static', filename='states.json') }}")
-            .then(response => response.json())
-            .then(data => states = data);
-
-        function updateStatesAndCurrency() {
-            const country = document.getElementById("country").value;
-            const stateSelect = document.getElementById("state");
-            
-            // Clear the existing state options
-            stateSelect.innerHTML = "";
-
-            if (!country) {
-                stateSelect.innerHTML = '<option value="" disabled selected>Please select a country first</option>';
-                return;
-            }
-
-            // Populate state options from states data
-            states[country].forEach(state => {
-                const option = document.createElement("option");
-                option.value = state;
-                option.textContent = state;
-                stateSelect.appendChild(option);
-            });
-
-           // Update income fields and currency
-            const currency = currencyMapping[country];
-            const defaultIncome = incomeMapping[country];
-            document.getElementById("gross_income").value = defaultIncome.gross;
-            document.getElementById("net_income").value = defaultIncome.net;
-
-            // Update currency symbols
-            document.getElementById("currency-symbol-gross").textContent = currency.symbol;
-            document.getElementById("currency-symbol-net").textContent = currency.symbol;
-
-            // Update placeholders to include the country currency
-            document.getElementById("gross_income").placeholder = `Gross Income in ${currency.name}`;
-            document.getElementById("net_income").placeholder = `Net Income in ${currency.name}`;
-        }
-
-        function updateIncomeFields() {
-            const country = document.getElementById("country").value;
-            const state = document.getElementById("state").value;
-
-            if (!country || !state) {
-                return;
-            }
-
-// You can optionally add logic here to vary income defaults based on state/region.
-            const currency = currencyMapping[country];
-            const defaultIncome = incomeMapping[country];
-            document.getElementById("gross_income").value = defaultIncome.gross;
-            document.getElementById("net_income").value = defaultIncome.net;
-
-            // Update currency symbols for gross/net income fields
-            document.getElementById("currency-symbol-gross").textContent = currency.symbol;
-            document.getElementById("currency-symbol-net").textContent = currency.symbol;
-        }
-    </script>
-</body>
-</html>
+{% endblock %}

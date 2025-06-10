@@ -1,6 +1,35 @@
+from dateutil.utils import today
+
 from app_functions import *
 
 app = Flask(__name__)
+
+
+@app.route("/get_holidays", methods=["POST"])
+def get_holidays():
+    today = date.today()
+    data = request.get_json()
+    country_code = data.get("country")
+    selected_region = extract_region_code(data.get("state"))
+    print(f"Received request for country: {country_code}, region: {selected_region}")
+
+    if not country_code or not selected_region:
+        return jsonify({"error": "Missing parameters"}), 400
+
+    holidays_current_month, working_days_current_month = get_holidays_in_month(country_code, selected_region)
+    return jsonify({
+        "region": selected_region,
+        "holidays": holidays_current_month,
+        "current_month": today.strftime("%B")
+    })
+
+# # app_functions.py
+# def get_state(country_code):
+#     selected_region = extract_region_code(request.form.get("state"))
+#     holidays_current_month, working_days_current_month = get_holidays_in_month(country_code, selected_region)
+#     print("selected country code:", country_code, "selected region:", selected_region)
+#     return holidays_current_month, working_days_current_month
+
 
 @app.route("/", methods=["GET", "POST"])
 def home():
@@ -33,22 +62,18 @@ def country_dashboard(country_code):
         "GB": {"name": "United Kingdom", "flag": "🇬🇧"},
         "CA": {"name": "Canada", "flag": "🇨🇦"},
     }
-
-    selected_region = None
-    holidays_this_month = []
     today = date.today()
 
-    if request.method == "POST":
-        selected_region = request.form.get("state")
-        print(f"Selected region: {selected_region}")
+    # holidays_current_month, working_days_current_month = get_state(country_code)
 
     return render_template(
         "country.html",
         country_code=country_code,  # <-- 必须加这行
         country_name=country_info[country_code]["name"],
         country_flag=country_info[country_code]["flag"],
-        selected_region=selected_region,
         current_month=today.strftime("%B")
+        # holidays_this_month=holidays_current_month,
+        # working_days_current_month=working_days_current_month
     )
 
 

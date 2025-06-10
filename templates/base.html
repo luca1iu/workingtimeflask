@@ -15,6 +15,14 @@
 </main>
 
 <script>
+    const defaultRegions = {
+        US: "CA - California",
+        AU: "NSW - New South Wales",
+        DE: "NW - Nordrhein-Westfalen",
+        GB: "ENG - England",
+        CA: "ON - Ontario"
+    };
+
     const currencyMapping = {
         US: { name: "USD", symbol: "($)" },
         AU: { name: "AUD", symbol: "(A$)" },
@@ -79,6 +87,31 @@
             option.textContent = state;
             stateSelect.appendChild(option);
         });
+        // Set default region if available
+        let defaultState = states[country][0];
+        if (defaultRegions[country]) {
+            stateSelect.value = defaultRegions[country];
+            defaultState = defaultRegions[country];
+        } else {
+            stateSelect.selectedIndex = 0;
+        }
+
+        // Fetch and display holidays for the default state
+        fetch('/get_holidays', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({country: country, state: defaultState})
+        })
+            .then(response => response.json())
+            .then(data => {
+                let holidaysSection = document.getElementById('holidays-section');
+                if (data.holidays.length > 0) {
+                    holidaysSection.innerHTML = `<h3>Holidays in ${data.region} for ${data.current_month}</h3>
+                <ul>${data.holidays.map(h => `<li>${h}</li>`).join('')}</ul>`;
+                } else {
+                    holidaysSection.innerHTML = `<p>No holidays this month in ${data.region}.</p>`;
+                }
+            });
     }
 
     function setIncomeAndCurrency(country) {
@@ -104,6 +137,32 @@
         if (grossSymbol) grossSymbol.textContent = currency.symbol;
         if (netSymbol) netSymbol.textContent = currency.symbol;
     }
+
+    document.getElementById('state').addEventListener('change', function() {
+        // 从当前 URL 获取国家代码（例如 /us）
+        const pathParts = window.location.pathname.split('/');
+        const country = pathParts[1].toUpperCase(); // 'us' -> 'US'
+
+        const state = this.value;
+        fetch('/get_holidays', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({country: country, state: state})
+        })
+            .then(response => response.json())
+            .then(data => {
+                // Update the holidays section
+                let holidaysSection = document.getElementById('holidays-section');
+                if (data.holidays.length > 0) {
+                    holidaysSection.innerHTML = `<h3>Holidays in ${data.region} for ${data.current_month}</h3>
+                <ul>${data.holidays.map(h => `<li>${h}</li>`).join('')}</ul>`;
+                } else {
+                    holidaysSection.innerHTML = `<p>No holidays this month in ${data.region}.</p>`;
+                }
+            });
+    });
+
+
 </script>
 </body>
 </html>
