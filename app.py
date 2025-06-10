@@ -128,8 +128,17 @@ def calculate(country_code):
 
     # Fetch holidays (assuming /get_holidays endpoint exists)
     holidays, working_days_current_month = get_holidays_in_month(country_code, extract_region_code(state))
+    left_working_days = [day for day in working_days_current_month if day > today and day not in holidays]
+    already_working_days = [day for day in working_days_current_month if day <= today and day not in holidays]
+    gross_income_per_day = gross / len(working_days_current_month)
+    net_income_per_day = net / len(working_days_current_month)
+
     print(f"Holidays for {country_code} in {state}: {holidays}")
     print(len(working_days_current_month))
+    print(len(left_working_days))
+    print(len(already_working_days))
+
+    # calculate how many working days left in the month
 
     return render_template(
         "country.html",

@@ -42,3 +42,13 @@ def get_holidays_in_month(country_code, state=None):
         start_date += timedelta(days=1)
 
     return holidays_current_month, working_days_current_month
+
+
+# today = date.today()
+# holidays_current_month, working_days_current_month = get_holidays_in_month("DE", "NW")
+# print(today)
+# print(holidays_current_month)
+# print(working_days_current_month)
+#
+# left_working_days = [day for day in working_days_current_month if day > today and day not in holidays_current_month]
+# print(len(left_working_days))
