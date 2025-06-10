@@ -3,17 +3,39 @@
 <html>
 <head>
     <title>{% block title %}Working Time{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='output.css') }}">
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <!-- Tailwind CSS 官方 CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- DaisyUI CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/daisyui@4.10.2/dist/full.js"></script>
+    <!-- Google Fonts: Pixel -->
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <style>
+      body, .font-mono, .pixel-font {
+        font-family: 'VT323', 'Fira Mono', 'Consolas', 'monospace' !important;
+      }
+    </style>
 </head>
-<body>
-<header>
-    <h1 class="text-4xl font-bold text-blue-600">Working Time Dashboard</h1>
-</header>
-
-<main>
-    {% block content %}
-    {% endblock %}
+<body class="bg-black text-green-400 min-h-screen w-full font-mono">
+<!-- Navigation Bar 黑客风格 -->
+<nav class="w-full flex items-center justify-between px-8 py-4 border-b-2 border-green-700 bg-black">
+  <div class="flex items-center gap-2">
+    <span class="text-3xl font-bold text-green-500 pixel-font tracking-widest">WorkingTime</span>
+    <span class="ml-2 text-green-700 text-lg font-light pixel-font">
+      Dashboard{% if country_name %} · {{ country_name }}{% endif %}
+    </span>
+  </div>
+  <div class="flex gap-2">
+    <a href="/" class="px-3 py-1 rounded border border-green-700 bg-black text-green-400 hover:bg-green-900 transition pixel-font {% if not country_code %}bg-green-800 text-black font-bold{% endif %}">Home</a>
+    <a href="/US" class="px-3 py-1 rounded border border-green-700 bg-black text-green-400 hover:bg-green-900 transition pixel-font {% if country_code == 'US' %}bg-green-800 text-black font-bold{% endif %}">United States🇺🇸</a>
+    <a href="/AU" class="px-3 py-1 rounded border border-green-700 bg-black text-green-400 hover:bg-green-900 transition pixel-font {% if country_code == 'AU' %}bg-green-800 text-black font-bold{% endif %}">Australia🇦🇺</a>
+    <a href="/DE" class="px-3 py-1 rounded border border-green-700 bg-black text-green-400 hover:bg-green-900 transition pixel-font {% if country_code == 'DE' %}bg-green-800 text-black font-bold{% endif %}">Germany🇩🇪</a>
+    <a href="/GB" class="px-3 py-1 rounded border border-green-700 bg-black text-green-400 hover:bg-green-900 transition pixel-font {% if country_code == 'GB' %}bg-green-800 text-black font-bold{% endif %}">United Kingdom🇬🇧</a>
+    <a href="/CA" class="px-3 py-1 rounded border border-green-700 bg-black text-green-400 hover:bg-green-900 transition pixel-font {% if country_code == 'CA' %}bg-green-800 text-black font-bold{% endif %}">Canada🇨🇦</a>
+  </div>
+</nav>
+<main class="w-full flex flex-col flex-1 px-0 py-0 min-h-0">
+  {% block content %}
+  {% endblock %}
 </main>
 
 <script>

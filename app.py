@@ -163,8 +163,8 @@ def calculate(country_code):
     hourly_gross_income = round(gross_income_per_day / (daily_working_duration / 60), 2)
     hourly_net_income = round(net_income_per_day / (daily_working_duration / 60), 2)
 
-    gross_income_today = worked_hours * hourly_gross_income
-    net_income_today = worked_hours * hourly_net_income
+    gross_income_today = max(worked_hours * hourly_gross_income, gross_income_per_day)
+    net_income_today = max(worked_hours * hourly_net_income, net_income_per_day)
 
     print(f"Daily working duration: {daily_working_duration} minutes")
 
@@ -188,7 +188,15 @@ def calculate(country_code):
         end_time=end_time,
         holidays=holidays,
         working_days_current_month=working_days_current_month,
-        current_month=today.strftime("%B")
+        current_month=today.strftime("%B"),
+        already_working_days=already_working_days,
+        worked_minutes=worked_minutes,
+        worked_percentage=worked_percentage,
+        daily_working_duration=daily_working_duration,
+        gross_income_today=gross_income_today,
+        net_income_today=net_income_today,
+        gross_income_so_far=gross_income_so_far,
+        net_income_so_far=net_income_so_far
     )
 
 
