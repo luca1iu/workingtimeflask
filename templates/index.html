@@ -43,28 +43,45 @@
     <!-- Echarts Gauge Chart for Workdays Completed This Month -->
     <div class="border-2 border-green-700 bg-black p-8 rounded-lg flex flex-col items-center pixel-font">
       <div class="text-xl font-bold mb-2 text-green-300">Workdays Completed This Month</div>
-      <div id="workdays-gauge" style="width: 380px; height: 300px;"></div>
-        <div class="mt-4 text-green-400 text-base" id="next-weekend">Days until next weekend: <span id="days-to-weekend"></span></div>
+      <div id="workdays-gauge" style="width: 320px; height: 240px;"></div>
+      <div class="mt-4 text-green-400 text-base" id="next-weekend">Days until next weekend: <span id="days-to-weekend"></span></div>
     </div>
     <!-- 动态时间和收入 -->
     <div class="border-2 border-green-700 bg-black p-8 rounded-lg flex flex-col gap-6 pixel-font">
       <div>
         <div class="text-xl font-bold text-green-300">Today's Working Time</div>
-        <div class="text-base text-green-500 mt-1" id="dynamic-worked-time"></div>
+        <div class="flex items-center gap-4 mt-2">
+          <div class="w-full">
+            <div id="tqdm-bar" class="flex items-center gap-[2px] h-8"></div>
+            <div class="text-green-100 font-bold text-sm mt-1" id="dynamic-worked-label"></div>
+          </div>
+        </div>
       </div>
       <div>
         <div class="text-xl font-bold text-green-300">Today's Earnings</div>
-        <div class="flex gap-8 mt-2">
-          <div class="text-green-400 font-bold text-2xl" id="dynamic-gross">0 {{ currency_symbol }}</div>
-          <div class="text-green-600 font-bold text-2xl" id="dynamic-net">0 {{ currency_symbol }}</div>
+        <div class="flex gap-8 mt-2 items-center">
+          <div class="text-green-400 font-bold text-2xl flex items-center">
+            <span id="dynamic-gross">0 {{ currency_symbol }}</span>
+            <span id="gross-anim" class="ml-2 font-bold text-lg"></span>
+          </div>
+          <div class="text-green-600 font-bold text-2xl flex items-center">
+            <span id="dynamic-net">0 {{ currency_symbol }}</span>
+            <span id="net-anim" class="ml-2 font-bold text-lg"></span>
+          </div>
         </div>
         <div class="text-xs text-green-700">(Gross / Net)</div>
       </div>
       <div class="mt-2">
         <div class="text-xl font-bold text-green-300">Monthly Total</div>
-        <div class="flex gap-8 mt-2">
-          <div class="text-green-400 font-bold text-xl">{{ gross_income_so_far|default(0)|round(2) if gross_income_so_far is defined and gross_income_so_far is not none else 0 }} {{ currency_symbol }}</div>
-          <div class="text-green-600 font-bold text-xl">{{ net_income_so_far|default(0)|round(2) if net_income_so_far is defined and net_income_so_far is not none else 0 }} {{ currency_symbol }}</div>
+        <div class="flex gap-8 mt-2 items-center">
+          <div class="text-green-400 font-bold text-xl flex items-center">
+            <span id="dynamic-gross-month">0 {{ currency_symbol }}</span>
+            <span id="gross-month-anim" class="ml-2 font-bold text-lg"></span>
+          </div>
+          <div class="text-green-600 font-bold text-xl flex items-center">
+            <span id="dynamic-net-month">0 {{ currency_symbol }}</span>
+            <span id="net-month-anim" class="ml-2 font-bold text-lg"></span>
+          </div>
         </div>
         <div class="text-xs text-green-700">(Gross / Net)</div>
       </div>
@@ -96,17 +113,14 @@
           show: true,
           width: 18
         },
-
         axisTick: {
           show: false
         },
-
         splitLine: {
           show: false
         },
-
         axisLabel: {
-            show: false
+          show: false
         },
         anchor: {
           show: true,
@@ -140,13 +154,15 @@
     ]
   });
 })();
-// 3. 动态更新时间和收入
+// 3. 动态更新时间和收入+像素tqdm进度条+动态钱数动画+动画暂停+每秒收入
 (function() {
   // 这些变量由后端传递
   const startTime = '{{ start_time or "09:00" }}';
   const endTime = '{{ end_time or "17:00" }}';
   const grossPerDay = Number({{ gross|default(0) }} / ({{ working_days_current_month|length if working_days_current_month is defined else 1 }}));
   const netPerDay = Number({{ net|default(0) }} / ({{ working_days_current_month|length if working_days_current_month is defined else 1 }}));
+  const grossMonth = Number({{ gross_income_so_far|default(0)|round(2) if gross_income_so_far is defined and gross_income_so_far is not none else 0 }});
+  const netMonth = Number({{ net_income_so_far|default(0)|round(2) if net_income_so_far is defined and net_income_so_far is not none else 0 }});
   const currency = '{{ currency_symbol }}';
   function parseTime(t) {
     const [h, m] = t.split(':').map(Number);
@@ -155,24 +171,72 @@
   const startMinutes = parseTime(startTime);
   const endMinutes = parseTime(endTime);
   const totalMinutes = endMinutes - startMinutes;
+  const totalSeconds = totalMinutes * 60;
+  let paused = false;
   function update() {
     const now = new Date();
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
     let worked = Math.max(0, Math.min(nowMinutes - startMinutes, totalMinutes));
     let percent = totalMinutes > 0 ? (worked / totalMinutes) : 0;
-    // 动态时间
-    let hours = Math.floor(worked / 60);
-    let mins = worked % 60;
-    let secs = now.getSeconds();
-    document.getElementById('dynamic-worked-time').textContent = `${hours.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')} / ${Math.floor(totalMinutes/60).toString().padStart(2,'0')}:${(totalMinutes%60).toString().padStart(2,'0')}:00 (${(percent*100).toFixed(1)}%)`;
-    // 动态收入
-    let gross = grossPerDay * percent;
-    let net = netPerDay * percent;
-    document.getElementById('dynamic-gross').textContent = `${gross.toFixed(2)} ${currency}`;
-    document.getElementById('dynamic-net').textContent = `${net.toFixed(2)} ${currency}`;
+    let workedSeconds = Math.max(0, Math.min((now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()) - (startMinutes * 60), totalSeconds));
+    // 判断是否超过工作时间
+    if (nowMinutes >= endMinutes) {
+      paused = true;
+    }
+    // tqdm像素进度条
+    const bar = document.getElementById('tqdm-bar');
+    const label = document.getElementById('dynamic-worked-label');
+    const barLen = 40; // 40格
+    let filled = Math.round(barLen * percent);
+    let animPos = paused ? -1 : Math.floor((workedSeconds % 60) / 60 * barLen);
+    bar.innerHTML = '';
+    for (let i = 0; i < barLen; i++) {
+      let color = i < filled ? '#22ff22' : '#222';
+      let anim = (!paused && i === filled) ? 'box-shadow:0 0 6px 2px #aaffaa;animation:pixel-breath 1s infinite alternate;' : '';
+      bar.innerHTML += `<div style="width:8px;height:24px;display:inline-block;margin-right:1px;background:${color};${anim}border-radius:2px;"></div>`;
+    }
+    label.textContent = `${worked} / ${totalMinutes} min (${(percent*100).toFixed(1)}%)`;
+    // 动态钱数动画，每秒递增
+    let grossPerSec = grossPerDay / totalSeconds;
+    let netPerSec = netPerDay / totalSeconds;
+    let secondGross = grossPerSec * workedSeconds;
+    let secondNet = netPerSec * workedSeconds;
+    let showGross = Math.floor(secondGross * 100) / 100;
+    let showNet = Math.floor(secondNet * 100) / 100;
+    document.getElementById('dynamic-gross').textContent = `${showGross.toFixed(2)} ${currency}`;
+    document.getElementById('dynamic-net').textContent = `${showNet.toFixed(2)} ${currency}`;
+    let grossAnim = document.getElementById('gross-anim');
+    let netAnim = document.getElementById('net-anim');
+    let secPercent = (workedSeconds % 60) / 60;
+    grossAnim.style.background = '';
+    netAnim.style.background = '';
+    grossAnim.textContent = paused ? '' : `+${grossPerSec.toFixed(2)}`;
+    netAnim.textContent = paused ? '' : `+${netPerSec.toFixed(2)}`;
+    // Monthly Total 动态
+    let showGrossMonth = Math.floor((grossMonth + secondGross) * 100) / 100;
+    let showNetMonth = Math.floor((netMonth + secondNet) * 100) / 100;
+    document.getElementById('dynamic-gross-month').textContent = `${showGrossMonth.toFixed(2)} ${currency}`;
+    document.getElementById('dynamic-net-month').textContent = `${showNetMonth.toFixed(2)} ${currency}`;
+    let grossMonthAnim = document.getElementById('gross-month-anim');
+    let netMonthAnim = document.getElementById('net-month-anim');
+    grossMonthAnim.style.background = '';
+    netMonthAnim.style.background = '';
+    grossMonthAnim.textContent = paused ? '' : `+${grossPerSec.toFixed(2)}`;
+    netMonthAnim.textContent = paused ? '' : `+${netPerSec.toFixed(2)}`;
+    // 暂停动画
+    if (paused) {
+      grossAnim.classList.remove('animate-pulse');
+      netAnim.classList.remove('animate-pulse');
+      grossMonthAnim.classList.remove('animate-pulse');
+      netMonthAnim.classList.remove('animate-pulse');
+    }
   }
   setInterval(update, 1000);
   update();
 })();
+// tqdm像素呼吸动画
+const style = document.createElement('style');
+style.innerHTML = `@keyframes pixel-breath {0%{box-shadow:0 0 6px 2px #aaffaa;}100%{box-shadow:0 0 0 0 #222;}}`;
+document.head.appendChild(style);
 </script>
 {% endblock %}
