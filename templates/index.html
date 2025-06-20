@@ -57,33 +57,23 @@
           </div>
         </div>
       </div>
-      <div>
-        <div class="text-xl font-bold text-green-300">Today's Earnings</div>
-        <div class="flex gap-8 mt-2 items-center">
-          <div class="text-green-400 font-bold text-2xl flex items-center">
-            <span id="dynamic-gross">0 {{ currency_symbol }}</span>
-            <span id="gross-anim" class="ml-2 font-bold text-lg"></span>
-          </div>
-          <div class="text-green-600 font-bold text-2xl flex items-center">
-            <span id="dynamic-net">0 {{ currency_symbol }}</span>
-            <span id="net-anim" class="ml-2 font-bold text-lg"></span>
-          </div>
+      <div class="flex flex-col items-center justify-center gap-2">
+        <div class="flex items-center gap-4 mb-2">
+          <button id="toggle-earnings" class="px-4 py-1 rounded border border-green-700 bg-black text-green-400 hover:bg-green-900 transition font-mono text-sm">Gross</button>
+          <button id="toggle-earnings-net" class="px-4 py-1 rounded border border-green-700 bg-black text-green-400 hover:bg-green-900 transition font-mono text-sm">Net</button>
         </div>
-        <div class="text-xs text-green-700">(Gross / Net)</div>
+        <div class="flex flex-col items-center justify-center w-full">
+          <span class="font-bold text-3xl" id="earnings-value" style="color:#22ff22;">0 {{ currency_symbol }}</span>
+          <span class="text-green-500 text-xs mt-1" id="earnings-label" style="display:none">Gross</span>
+          <span class="text-green-300 text-base mt-2">Today's Earnings</span>
+        </div>
       </div>
       <div class="mt-2">
-        <div class="text-xl font-bold text-green-300">Monthly Total</div>
-        <div class="flex gap-8 mt-2 items-center">
-          <div class="text-green-400 font-bold text-xl flex items-center">
-            <span id="dynamic-gross-month">0 {{ currency_symbol }}</span>
-            <span id="gross-month-anim" class="ml-2 font-bold text-lg"></span>
-          </div>
-          <div class="text-green-600 font-bold text-xl flex items-center">
-            <span id="dynamic-net-month">0 {{ currency_symbol }}</span>
-            <span id="net-month-anim" class="ml-2 font-bold text-lg"></span>
-          </div>
+        <div class="flex flex-col items-center justify-center w-full">
+          <span class="font-bold text-2xl" id="monthly-value" style="color:#22ff22;">0 {{ currency_symbol }}</span>
+          <span class="text-green-500 text-xs mt-1" id="monthly-label" style="display:none">Gross</span>
+          <span class="text-green-300 text-base mt-2">Monthly Total</span>
         </div>
-        <div class="text-xs text-green-700">(Gross / Net)</div>
       </div>
     </div>
   </div>
@@ -101,8 +91,8 @@
 })();
 // 2. Echarts Gauge Chart for Workdays Completed
 (function() {
-  const already = {{ already_working_days|length if already_working_days is defined else 0 }};
-  const total = {{ working_days_current_month|length if working_days_current_month is defined else 1 }};
+  const already = Number("{{ already_working_days|length if already_working_days is defined else 0 }}");
+  const total = Number("{{ working_days_current_month|length if working_days_current_month is defined else 1 }}");
   const percent = total > 0 ? (already / total * 100) : 0;
   const chart = echarts.init(document.getElementById('workdays-gauge'));
   chart.setOption({
@@ -154,15 +144,15 @@
     ]
   });
 })();
-// 3. 动态更新时间和收入+像素tqdm进度条+动态钱数动画+动画暂停+每秒收入
+// 3. 动态更新时间和收入+像素tqdm进度条+动态钱数动画+动画暂停+每秒收入+toggle+monthly同步
 (function() {
   // 这些变量由后端传递
   const startTime = '{{ start_time or "09:00" }}';
   const endTime = '{{ end_time or "17:00" }}';
-  const grossPerDay = Number({{ gross|default(0) }} / ({{ working_days_current_month|length if working_days_current_month is defined else 1 }}));
-  const netPerDay = Number({{ net|default(0) }} / ({{ working_days_current_month|length if working_days_current_month is defined else 1 }}));
-  const grossMonth = Number({{ gross_income_so_far|default(0)|round(2) if gross_income_so_far is defined and gross_income_so_far is not none else 0 }});
-  const netMonth = Number({{ net_income_so_far|default(0)|round(2) if net_income_so_far is defined and net_income_so_far is not none else 0 }});
+  const grossPerDay = Number("{{ gross|default(0) }}") / Number("{{ working_days_current_month|length if working_days_current_month is defined else 1 }}");
+  const netPerDay = Number("{{ net|default(0) }}") / Number("{{ working_days_current_month|length if working_days_current_month is defined else 1 }}");
+  const grossMonth = Number("{{ gross_income_so_far|default(0)|round(2) if gross_income_so_far is defined and gross_income_so_far is not none else 0 }}");
+  const netMonth = Number("{{ net_income_so_far|default(0)|round(2) if net_income_so_far is defined and net_income_so_far is not none else 0 }}");
   const currency = '{{ currency_symbol }}';
   function parseTime(t) {
     const [h, m] = t.split(':').map(Number);
@@ -173,13 +163,48 @@
   const totalMinutes = endMinutes - startMinutes;
   const totalSeconds = totalMinutes * 60;
   let paused = false;
+  let showGross = true;
+  document.getElementById('toggle-earnings').onclick = function() {
+    showGross = true;
+    this.classList.add('bg-green-800','text-black','font-bold');
+    document.getElementById('toggle-earnings-net').classList.remove('bg-green-800','text-black','font-bold');
+    updateEarnings();
+    updateMonthly();
+  };
+  document.getElementById('toggle-earnings-net').onclick = function() {
+    showGross = false;
+    this.classList.add('bg-green-800','text-black','font-bold');
+    document.getElementById('toggle-earnings').classList.remove('bg-green-800','text-black','font-bold');
+    updateEarnings();
+    updateMonthly();
+  };
+  function updateEarningsValue(gross, net) {
+    const value = showGross ? gross : net;
+    const label = showGross ? 'Gross' : 'Net';
+    document.getElementById('earnings-value').textContent = `${value.toFixed(2)} ${currency}`;
+    document.getElementById('earnings-label').textContent = label;
+    document.getElementById('earnings-value').style.color = showGross ? '#22ff22' : '#16e0a0';
+  }
+  function updateMonthlyValue(gross, net) {
+    const value = showGross ? gross : net;
+    const label = showGross ? 'Gross' : 'Net';
+    document.getElementById('monthly-value').textContent = `${value.toFixed(2)} ${currency}`;
+    document.getElementById('monthly-label').textContent = label;
+    document.getElementById('monthly-value').style.color = showGross ? '#22ff22' : '#16e0a0';
+  }
+  function updateEarnings() {
+    updateEarningsValue(currentGross, currentNet);
+  }
+  function updateMonthly() {
+    updateMonthlyValue(currentGrossMonth, currentNetMonth);
+  }
+  let currentGross = 0, currentNet = 0, currentGrossMonth = 0, currentNetMonth = 0;
   function update() {
     const now = new Date();
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
     let worked = Math.max(0, Math.min(nowMinutes - startMinutes, totalMinutes));
     let percent = totalMinutes > 0 ? (worked / totalMinutes) : 0;
     let workedSeconds = Math.max(0, Math.min((now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()) - (startMinutes * 60), totalSeconds));
-    // 判断是否超过工作时间
     if (nowMinutes >= endMinutes) {
       paused = true;
     }
@@ -201,38 +226,20 @@
     let netPerSec = netPerDay / totalSeconds;
     let secondGross = grossPerSec * workedSeconds;
     let secondNet = netPerSec * workedSeconds;
-    let showGross = Math.floor(secondGross * 100) / 100;
-    let showNet = Math.floor(secondNet * 100) / 100;
-    document.getElementById('dynamic-gross').textContent = `${showGross.toFixed(2)} ${currency}`;
-    document.getElementById('dynamic-net').textContent = `${showNet.toFixed(2)} ${currency}`;
-    let grossAnim = document.getElementById('gross-anim');
-    let netAnim = document.getElementById('net-anim');
-    let secPercent = (workedSeconds % 60) / 60;
-    grossAnim.style.background = '';
-    netAnim.style.background = '';
-    grossAnim.textContent = paused ? '' : `+${grossPerSec.toFixed(2)}`;
-    netAnim.textContent = paused ? '' : `+${netPerSec.toFixed(2)}`;
+    currentGross = Math.floor(secondGross * 100) / 100;
+    currentNet = Math.floor(secondNet * 100) / 100;
     // Monthly Total 动态
     let showGrossMonth = Math.floor((grossMonth + secondGross) * 100) / 100;
     let showNetMonth = Math.floor((netMonth + secondNet) * 100) / 100;
-    document.getElementById('dynamic-gross-month').textContent = `${showGrossMonth.toFixed(2)} ${currency}`;
-    document.getElementById('dynamic-net-month').textContent = `${showNetMonth.toFixed(2)} ${currency}`;
-    let grossMonthAnim = document.getElementById('gross-month-anim');
-    let netMonthAnim = document.getElementById('net-month-anim');
-    grossMonthAnim.style.background = '';
-    netMonthAnim.style.background = '';
-    grossMonthAnim.textContent = paused ? '' : `+${grossPerSec.toFixed(2)}`;
-    netMonthAnim.textContent = paused ? '' : `+${netPerSec.toFixed(2)}`;
-    // 暂停动画
-    if (paused) {
-      grossAnim.classList.remove('animate-pulse');
-      netAnim.classList.remove('animate-pulse');
-      grossMonthAnim.classList.remove('animate-pulse');
-      netMonthAnim.classList.remove('animate-pulse');
-    }
+    currentGrossMonth = showGrossMonth;
+    currentNetMonth = showNetMonth;
+    updateEarnings();
+    updateMonthly();
   }
   setInterval(update, 1000);
   update();
+  // 默认高亮Gross
+  document.getElementById('toggle-earnings').classList.add('bg-green-800','text-black','font-bold');
 })();
 // tqdm像素呼吸动画
 const style = document.createElement('style');
