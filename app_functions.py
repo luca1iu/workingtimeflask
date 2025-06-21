@@ -45,6 +45,37 @@ def get_holidays_in_month(country_code, state=None):
     return holidays_current_month, working_days_current_month
 
 
+def get_holidays_in_specific_month(country_code, state=None, year=None, month=None):
+    if year is None or month is None:
+        today = date.today()
+        year = today.year
+        month = today.month
+    first_day = date(year, month, 1)
+    if month == 12:
+        last_day = date(year, 12, 31)
+    else:
+        last_day = date(year, month + 1, 1) - timedelta(days=1)
+    try:
+        if state:
+            country_holidays = holidays.country_holidays(country_code, subdiv=state)
+        else:
+            country_holidays = holidays.country_holidays(country_code)
+    except Exception as e:
+        print(f"Error: {e}")
+        return [], []
+    holidays_current_month = []
+    working_days_current_month = []
+    start_date = first_day
+    while start_date <= last_day:
+        if start_date in country_holidays:
+            holidays_current_month.append(start_date)
+        else:
+            if start_date.weekday() < 5:
+                working_days_current_month.append(start_date)
+        start_date += timedelta(days=1)
+    return holidays_current_month, working_days_current_month
+
+
 # today = date.today()
 # holidays_current_month, working_days_current_month = get_holidays_in_month("DE", "NW")
 # print(today)

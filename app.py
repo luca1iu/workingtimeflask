@@ -54,6 +54,7 @@ def home():
         net = request.form.get("net_income")
         start_time = request.form.get("start_time")
         end_time = request.form.get("end_time")
+        onboard_date = request.form.get("onboard_date")
     else:
         country = "US"
         state = default_regions[country]
@@ -61,13 +62,14 @@ def home():
         net = default_income[country]["net"]
         start_time = "09:00"
         end_time = "17:00"
-    context = get_dashboard_context(country, state, gross, net, start_time, end_time)
+        onboard_date = date.today().replace(month=1, day=1).strftime("%Y-%m-%d")
+    context = get_dashboard_context(country, state, gross, net, start_time, end_time, onboard_date)
     if context is None:
         return render_template("error.html", message="Invalid country code"), 400
     return render_template("index.html", **context)
 
 
-def get_dashboard_context(country_code, state=None, gross=None, net=None, start_time=None, end_time=None):
+def get_dashboard_context(country_code, state=None, gross=None, net=None, start_time=None, end_time=None, onboard_date=None):
     country_info = {
         "US": {"name": "United States", "flag": "🇺🇸", "currency": {"name": "USD", "symbol": "($)"}},
         "AU": {"name": "Australia", "flag": "🇦🇺", "currency": {"name": "AUD", "symbol": "(A$)"}},
@@ -99,6 +101,8 @@ def get_dashboard_context(country_code, state=None, gross=None, net=None, start_
     net = net or default_income[country_code]["net"]
     start_time = start_time or "09:00"
     end_time = end_time or "17:00"
+    if not onboard_date:
+        onboard_date = today.replace(month=1, day=1).strftime("%Y-%m-%d")
     # 计算节假日和工作日
     holidays, working_days_current_month = get_holidays_in_month(country_code, extract_region_code(state))
     left_working_days = [day for day in working_days_current_month if day > today and day not in holidays]
@@ -123,6 +127,36 @@ def get_dashboard_context(country_code, state=None, gross=None, net=None, start_
     hourly_net_income = round(net_income_per_day / (daily_working_duration / 60), 2) if daily_working_duration else 0
     gross_income_today = max(worked_hours * hourly_gross_income, gross_income_per_day) if daily_working_duration else 0
     net_income_today = max(worked_hours * hourly_net_income, net_income_per_day) if daily_working_duration else 0
+
+    # 计算入职以来的工作日和累计收入
+    onboard_days = 0
+    total_gross_earnings = 0
+    total_net_earnings = 0
+    try:
+        onboard_dt = pd.to_datetime(onboard_date).date()
+        # 获取所有入职以来的工作日（不含节假日），分月计算
+        all_working_days = []
+        y, m = onboard_dt.year, onboard_dt.month
+        while (y < today.year) or (y == today.year and m <= today.month):
+            _, wds = get_holidays_in_specific_month(country_code, extract_region_code(state), y, m)
+            for d in wds:
+                if (d >= onboard_dt) and (d <= today):
+                    all_working_days.append(d)
+            # 下一个月
+            if m == 12:
+                y += 1
+                m = 1
+            else:
+                m += 1
+        onboard_days = len(all_working_days)
+        # 以当前月的日薪为基准
+        total_gross_earnings = round(gross_income_per_day * onboard_days, 2)
+        total_net_earnings = round(net_income_per_day * onboard_days, 2)
+    except Exception:
+        onboard_days = 0
+        total_gross_earnings = 0
+        total_net_earnings = 0
+
     return dict(
         country_code=country_code,
         country_name=country_info[country_code]["name"],
@@ -133,6 +167,7 @@ def get_dashboard_context(country_code, state=None, gross=None, net=None, start_
         net=net,
         start_time=start_time,
         end_time=end_time,
+        onboard_date=onboard_date,
         holidays=holidays,
         working_days_current_month=working_days_current_month,
         current_month=today.strftime("%B"),
@@ -143,7 +178,10 @@ def get_dashboard_context(country_code, state=None, gross=None, net=None, start_
         gross_income_today=gross_income_today,
         net_income_today=net_income_today,
         gross_income_so_far=gross_income_so_far,
-        net_income_so_far=net_income_so_far
+        net_income_so_far=net_income_so_far,
+        onboard_days=onboard_days,
+        total_gross_earnings=total_gross_earnings,
+        total_net_earnings=total_net_earnings
     )
 
 
