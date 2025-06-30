@@ -1,3 +1,5 @@
+import './globals.css'
+
 const currencySymbols = {
   US: '($)',
   AU: '(A$)',
@@ -18,8 +20,8 @@ const currencySymbols = {
   <label htmlFor="state" className="min-w-max">State/Region:</label>
   <select
     id="state"
-    className="bg-black text-green-400 border-2 border-green-500 rounded px-2 py-1 font-mono w-24 overflow-hidden"
-    style={{ textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+    className="bg-red-500 text-green-400 border-2 border-green-500 rounded px-2 py-1 font-mono w-24"
+    style={{ border: '2px solid #22c55e' }}
     value={state}
     onChange={e => setState(e.target.value)}
   >
