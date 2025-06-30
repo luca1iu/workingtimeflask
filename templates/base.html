@@ -24,8 +24,15 @@
       <!-- 可选：显示国家名/flag -->
     </span>
   </div>
-  <div class="flex gap-2">
+  <div class="flex gap-2 items-center">
     <a href="/" class="px-3 py-1 rounded border border-green-700 bg-black text-green-400 hover:bg-green-900 transition pixel-font bg-green-800 text-black font-bold">Home</a>
+    {% if current_user.is_authenticated %}
+      <span class="text-green-400 pixel-font">{{ current_user.username }}</span>
+      <a href="{{ url_for('logout') }}" class="px-3 py-1 rounded border border-green-700 bg-black text-green-400 hover:bg-green-900 transition pixel-font font-bold">Logout</a>
+    {% else %}
+      <a href="{{ url_for('register') }}" class="px-3 py-1 rounded border border-green-700 bg-black text-green-400 hover:bg-green-900 transition pixel-font font-bold">Register</a>
+      <a href="{{ url_for('login') }}" class="px-3 py-1 rounded border border-green-700 bg-black text-green-400 hover:bg-green-900 transition pixel-font font-bold">Login</a>
+    {% endif %}
   </div>
 </nav>
 <main class="w-full flex flex-col flex-1 px-0 py-0 min-h-0">

@@ -19,7 +19,13 @@
   "homepage": "https://github.com/luca1iu/workingtimeflask#readme",
   "description": "",
   "devDependencies": {
+    "autoprefixer": "^10.4.21",
     "daisyui": "^5.0.43",
-    "tailwindcss": "^4.1.8"
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.10"
+  },
+  "dependencies": {
+    "echarts": "^5.6.0",
+    "echarts-for-react": "^3.0.2"
   }
 }
