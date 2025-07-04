@@ -6,7 +6,9 @@ import { getWorkingDaysInMonth } from '../../utils/holidays';
 let ReactECharts;
 try {
   ReactECharts = require('echarts-for-react').default;
-} catch {}
+} catch {
+  // ECharts not available
+}
 
 const defaultRegions = {
   US: 'CA - California',
@@ -40,19 +42,30 @@ function getTodayEarnings(gross, net, startTime, endTime) {
   const [eh, em] = endTime.split(":").map(Number);
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), sh, sm);
   const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), eh, em);
+  
+  // 计算总工作时间和已工作时间（分钟）
   const totalMinutes = (end - start) / 60000;
   const workedMinutes = Math.max(0, Math.min(totalMinutes, (now - start) / 60000));
+  
+  // 计算每分钟收入
   const grossPerMinute = gross / totalMinutes;
   const netPerMinute = net / totalMinutes;
+  
+  // 计算当前收入
+  const currentGross = workedMinutes * grossPerMinute;
+  const currentNet = workedMinutes * netPerMinute;
+  
   return {
-    gross: Math.max(0, Math.min(gross, workedMinutes * grossPerMinute)),
-    net: Math.max(0, Math.min(net, workedMinutes * netPerMinute)),
+    gross: Math.max(0, Math.min(gross, currentGross)),
+    net: Math.max(0, Math.min(net, currentNet)),
   };
 }
 
 function isWeekend() {
   const day = new Date().getDay();
-  return day === 0 || day === 6;
+  const isWeekendDay = day === 0 || day === 6;
+  console.log('Weekend check:', { day, isWeekendDay, dayName: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][day] });
+  return isWeekendDay;
 }
 
 function PixelProgressBar({ percent }) {
@@ -72,10 +85,7 @@ function PixelProgressBar({ percent }) {
   );
 }
 
-function extractRegionCode(regionStr) {
-  if (!regionStr) return "";
-  return regionStr.split("-")[0].trim();
-}
+
 
 function getAllWorkingDaysSinceOnboard(country, state, onboardDateStr) {
   const onboardDate = new Date(onboardDateStr);
@@ -109,7 +119,6 @@ export default function Home() {
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('17:00');
   const [onboardDate, setOnboardDate] = useState('');
-  const [dashboardData, setDashboardData] = useState(null);
   // 新增：今日进度和收入
   const [todayPercent, setTodayPercent] = useState(0);
   const [todayEarnings, setTodayEarnings] = useState({ gross: 0, net: 0 });
@@ -131,19 +140,23 @@ export default function Home() {
 
   // 每秒刷新今日进度和收入
   useEffect(() => {
-    if (isWeekend()) {
-      setTodayPercent(0);
-      setTodayEarnings({ gross: 0, net: 0 });
-      return;
-    }
+    // 临时移除周末检查以测试功能
+    // if (isWeekend()) {
+    //   setTodayPercent(0);
+    //   setTodayEarnings({ gross: 0, net: 0 });
+    //   return;
+    // }
     const update = () => {
-      setTodayPercent(getTodayProgress(startTime, endTime));
-      setTodayEarnings(getTodayEarnings(gross, net, startTime, endTime));
+      const progress = getTodayProgress(startTime, endTime);
+      const earnings = getTodayEarnings(gross, net, startTime, endTime);
+      console.log('Updating today:', { progress, earnings, gross, net, startTime, endTime });
+      setTodayPercent(progress);
+      setTodayEarnings(earnings);
     };
     update();
     const timer = setInterval(update, 1000);
     return () => clearInterval(timer);
-  }, [gross, net, startTime, endTime, country, state]);
+  }, [gross, net, startTime, endTime]);
 
   // 计算本月工作日和已完成工作日
   useEffect(() => {
@@ -177,11 +190,7 @@ export default function Home() {
   const handleCalculate = (e) => {
     e.preventDefault();
     // TODO: 这里应调用 holidays/working days 计算逻辑
-    setDashboardData({
-      workdaysCompleted: 10,
-      workdaysTotal: 22,
-      percent: 45,
-    });
+    console.log('Calculate button clicked');
   };
 
   // ECharts 配置示例
@@ -207,78 +216,186 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-green-400 font-mono">
+    <div className="min-h-screen bg-base-100">
       {/* 导航栏 */}
-      <nav className="w-full flex items-center justify-between px-8 py-4 border-b border-green-700">
-        <span className="text-2xl font-bold tracking-widest">Home</span>
-      </nav>
+      <div className="navbar bg-base-200 shadow-lg">
+        <div className="navbar-start">
+          <span className="text-2xl font-bold text-primary">Working Time Tracker</span>
+        </div>
+        <div className="navbar-end">
+          <div className="badge badge-primary">Sunset Theme</div>
+        </div>
+      </div>
+
       {/* 表单 */}
-      <form className="flex flex-row flex-wrap gap-2 items-center justify-center py-8" onSubmit={handleCalculate}>
-        <label htmlFor="country" className="min-w-max">Country:</label>
-        <select className="select select-success" value={country} onChange={e => setCountry(e.target.value)}>
-          <option value="US">United States</option>
-          <option value="AU">Australia</option>
-          <option value="DE">Germany</option>
-          <option value="GB">United Kingdom</option>
-          <option value="CA">Canada</option>
-        </select>
-        <label htmlFor="state" className="min-w-max">State:</label>
-        <select className="input input-success" value={state} onChange={e => setState(e.target.value)}>
-          {states[country]?.map(s => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-        <label htmlFor="gross" className="min-w-max">Gross Income:</label>
-        <input className="input input-success" type="number" value={gross} onChange={e => setGross(Number(e.target.value))} placeholder="Gross Income" />
-        <label htmlFor="net" className="min-w-max">Net Income:</label>
-        <input className="input input-success" type="number" value={net} onChange={e => setNet(Number(e.target.value))} placeholder="Net Income" />
-        <label htmlFor="startTime" className="min-w-max">Start Time:</label>
-        <input className="input input-success" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} />
-        <input className="input input-success" type="time" value={endTime} onChange={e => setEndTime(e.target.value)} />
-        <input className="input input-success" type="date" value={onboardDate} onChange={e => setOnboardDate(e.target.value)} />
-        
-      </form>
-      {/* Dashboard 2x2 grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto py-8">
-        {/* Box 1: Workdays Completed This Month */}
-        <div className="bg-green-950 rounded-xl p-6 flex flex-col items-center shadow-lg">
-          <div className="text-lg mb-2">Workdays Completed This Month</div>
-          {/* ECharts 仪表盘 */}
-          {ReactECharts ? (
-            <ReactECharts option={gaugeOption} style={{ height: 180, width: '100%' }} />
-          ) : (
-            <div className="w-full h-32 flex items-center justify-center text-green-400">[Please install <code>echarts-for-react</code>]</div>
-          )}
-        </div>
-        {/* Box 2: Today&apos;s Working Time */}
-        <div className="bg-green-950 rounded-xl p-6 flex flex-col items-center shadow-lg">
-          <div className="text-lg mb-2">Today&apos;s Working Time</div>
-          {/* Pixel Progress Bar & 动态收入/周末提示 */}
-          {isWeekend() ? (
-            <div className="w-full h-8 flex items-center justify-center text-xl font-bold tracking-widest" style={{fontFamily:'monospace',textShadow:'0 0 8px #00FF00'}}>
-              Enjoy weekend, see you next week
-            </div>
-          ) : (
-            <>
-              <PixelProgressBar percent={todayPercent} />
-              <div className="mt-2 text-lg">
-                Gross: <span className="font-bold">${todayEarnings.gross.toFixed(2)}</span> &nbsp;|
-                Net: <span className="font-bold">${todayEarnings.net.toFixed(2)}</span>
+      <div className="container mx-auto p-6">
+        <div className="card bg-base-200 shadow-xl mb-8">
+          <div className="card-body">
+            <h2 className="card-title text-primary mb-4">Configuration</h2>
+            <form className="overflow-x-auto" onSubmit={handleCalculate}>
+              {/* 所有输入框排成一行，均匀分布 */}
+              <div className="flex justify-between items-start gap-4">
+                <div className="form-control w-48">
+                  <label className="label">
+                    <span className="label-text font-semibold">Country</span>
+                  </label>
+                  <select 
+                    className="select select-bordered w-full" 
+                    value={country} 
+                    onChange={e => setCountry(e.target.value)}
+                  >
+                    <option value="US">🇺🇸 United States</option>
+                    <option value="AU">🇦🇺 Australia</option>
+                    <option value="DE">🇩🇪 Germany</option>
+                    <option value="GB">🇬🇧 United Kingdom</option>
+                    <option value="CA">🇨🇦 Canada</option>
+                  </select>
+                </div>
+
+                <div className="form-control w-48">
+                  <label className="label">
+                    <span className="label-text font-semibold">State/Province</span>
+                  </label>
+                  <select 
+                    className="select select-bordered w-full" 
+                    value={state} 
+                    onChange={e => setState(e.target.value)}
+                  >
+                    {states[country]?.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="form-control w-32">
+                  <label className="label">
+                    <span className="label-text font-semibold">Gross Income</span>
+                  </label>
+                  <input 
+                    className="input input-bordered w-full" 
+                    type="number" 
+                    value={gross} 
+                    onChange={e => setGross(Number(e.target.value))} 
+                  />
+                </div>
+
+                <div className="form-control w-32">
+                  <label className="label">
+                    <span className="label-text font-semibold">Net Income</span>
+                  </label>
+                  <input 
+                    className="input input-bordered w-full" 
+                    type="number" 
+                    value={net} 
+                    onChange={e => setNet(Number(e.target.value))} 
+                  />
+                </div>
+
+                <div className="form-control w-32">
+                  <label className="label">
+                    <span className="label-text font-semibold">Start Time</span>
+                  </label>
+                  <input 
+                    className="input input-bordered w-full" 
+                    type="time" 
+                    value={startTime} 
+                    onChange={e => setStartTime(e.target.value)} 
+                  />
+                </div>
+
+                <div className="form-control w-32">
+                  <label className="label">
+                    <span className="label-text font-semibold">End Time</span>
+                  </label>
+                  <input 
+                    className="input input-bordered w-full" 
+                    type="time" 
+                    value={endTime} 
+                    onChange={e => setEndTime(e.target.value)} 
+                  />
+                </div>
+
+                <div className="form-control w-32">
+                  <label className="label">
+                    <span className="label-text font-semibold">Onboard Date</span>
+                  </label>
+                  <input 
+                    className="input input-bordered w-full" 
+                    type="date" 
+                    value={onboardDate} 
+                    onChange={e => setOnboardDate(e.target.value)} 
+                  />
+                </div>
               </div>
-            </>
-          )}
+            </form>
+          </div>
         </div>
-        {/* Box 3: Total Since Onboard */}
-        <div className="bg-green-950 rounded-xl p-6 flex flex-col items-center shadow-lg">
-          <div className="text-lg mb-2">Total Since Onboard</div>
-          <div className="text-green-400 text-lg mt-2">Days Worked: <span className="font-bold">{onboardStats.days}</span></div>
-          <div className="text-green-400 text-lg mt-2">Total Gross Earnings: <span className="font-bold">${onboardStats.gross}</span></div>
-          <div className="text-green-400 text-lg mt-2">Total Net Earnings: <span className="font-bold">${onboardStats.net}</span></div>
-        </div>
-        {/* Box 4: Month Remaining */}
-        <div className="bg-green-950 rounded-xl p-6 flex flex-col items-center shadow-lg">
-          <div className="text-lg mb-2">Month Remaining</div>
-          <div>[Workdays Left, Earnings Left]</div>
+
+        {/* Dashboard 2x2 grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Box 1: Workdays Completed This Month */}
+          <div className="card bg-base-200 shadow-xl">
+            <div className="card-body">
+              <h3 className="card-title text-primary">Workdays Completed This Month</h3>
+              {/* ECharts 仪表盘 */}
+              {ReactECharts ? (
+                <ReactECharts option={gaugeOption} style={{ height: 180, width: '100%' }} />
+              ) : (
+                <div className="w-full h-32 flex items-center justify-center text-base-content">
+                  [Please install <code>echarts-for-react</code>]
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Box 2: Today's Working Time */}
+          <div className="card bg-base-200 shadow-xl">
+            <div className="card-body">
+              <h3 className="card-title text-primary">Today&apos;s Working Time</h3>
+              {/* Pixel Progress Bar & 动态收入/周末提示 */}
+              {/* 临时显示计算，无论是否周末 */}
+              <PixelProgressBar percent={todayPercent} />
+              <div className="mt-4 text-lg">
+                <div className="flex justify-between">
+                  <span>Gross: <span className="font-bold text-success">${todayEarnings.gross.toFixed(2)}</span></span>
+                  <span>Net: <span className="font-bold text-success">${todayEarnings.net.toFixed(2)}</span></span>
+                </div>
+                <div className="text-xs text-gray-500 mt-2">
+                  Progress: {todayPercent.toFixed(1)}% | Time: {startTime}-{endTime}
+                  {isWeekend() && <span className="text-orange-500 ml-2">(Weekend)</span>}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Box 3: Total Since Onboard */}
+          <div className="card bg-base-200 shadow-xl">
+            <div className="card-body">
+              <h3 className="card-title text-primary">Total Since Onboard</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Days Worked:</span>
+                  <span className="font-bold text-accent">{onboardStats.days}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Total Gross:</span>
+                  <span className="font-bold text-success">${onboardStats.gross}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Total Net:</span>
+                  <span className="font-bold text-success">${onboardStats.net}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Box 4: Month Remaining */}
+          <div className="card bg-base-200 shadow-xl">
+            <div className="card-body">
+              <h3 className="card-title text-primary">Month Remaining</h3>
+              <div className="text-base-content">[Workdays Left, Earnings Left]</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
